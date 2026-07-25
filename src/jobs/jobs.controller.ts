@@ -11,6 +11,11 @@ export class JobsController {
     return this.jobsService.create(createJobDto);
   }
 
+  @Get()
+  getAllJobs() {
+    return this.jobsService.getAllJobs();
+  }
+
   @Get(':id')
   getJob(@Param('id') id: string) {
     return this.jobsService.getById(id);

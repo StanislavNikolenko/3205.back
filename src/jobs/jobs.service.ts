@@ -65,11 +65,33 @@ export class JobsService {
     }
   }
 
+  public getAllJobs() {
+    const jobs = Array.from(this.jobs.values());
+    const result = jobs.map((job) => {
+      const urlSuccessCount = job.results.filter(
+        (r) => r.status === 'success',
+      ).length;
+      const urlErrorCount = job.results.filter(
+        (r) => r.status === 'error',
+      ).length;
+
+      return {
+        id: job.id,
+        status: job.status,
+        createdAt: job.createdAt,
+        urlCount: job.urls.length,
+        urlSuccessCount,
+        urlErrorCount,
+      };
+    });
+    return result;
+  }
+
   public getById(jobId: string) {
     const job = this.jobs.get(jobId);
     if (!job) {
       throw new NotFoundException(`Job ${jobId} not found`);
     }
-    return job;
+    return job.results;
   }
 }
