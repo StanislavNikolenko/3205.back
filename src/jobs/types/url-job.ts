@@ -1,11 +1,17 @@
 export type JobStatus =
-  'pending' | 'running' | 'completed' | 'cancelled' | 'failed';
+  'pending' | 'in_progress' | 'completed' | 'cancelled' | 'failed';
+
+export type UrlStatus =
+  'pending' | 'in_progress' | 'success' | 'error' | 'cancelled';
 
 export type UrlResult = {
   url: string;
-  ok: boolean;
-  statusCode?: number;
+  status: UrlStatus;
+  httpStatusCode?: number;
   error?: string;
+  startedAt?: Date;
+  finishedAt?: Date;
+  durationMs?: number;
 };
 
 export type Job = {

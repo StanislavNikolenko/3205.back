@@ -12,24 +12,33 @@ export class JobsService {
       id: randomUUID(),
       status: 'pending',
       urls: createJobDto.urls,
-      results: [],
+      results: createJobDto.urls.map((url) => ({
+        url,
+        status: 'pending' as const,
+      })),
       createdAt: new Date(),
     };
 
     this.jobs.set(job.id, job);
     void this.run(job.id);
 
-    return { jobId: job.id, status: job.status };
+    return { jobId: job.id, status: 'pending' };
   }
 
   private async run(jobId: string) {
     const job = this.jobs.get(jobId);
     if (!job) return;
 
-    job.status = 'running';
+    job.status = 'in_progress';
 
     try {
-      for (const url of job.urls) {
+      for (let i = 0; i < job.urls.length; i++) {
+        const url = job.urls[i];
+        const item = job.results[i];
+
+        item.status = 'in_progress';
+        item.startedAt = new Date();
+
         try {
           const res = await fetch(url, {
             method: 'HEAD',
@@ -39,14 +48,14 @@ export class JobsService {
           const delayMs = Math.floor(Math.random() * 10001);
           await new Promise((resolve) => setTimeout(resolve, delayMs));
 
-          job.results.push({ url, ok: res.ok, statusCode: res.status });
+          item.httpStatusCode = res.status;
+          item.status = 'success';
         } catch (e) {
-          job.results.push({
-            url,
-            ok: false,
-            error: e instanceof Error ? e.message : 'Unknown error',
-          });
+          item.status = 'error';
+          item.error = e instanceof Error ? e.message : 'Unknown error';
         }
+        item.finishedAt = new Date();
+        item.durationMs = item.finishedAt.getTime() - item.startedAt.getTime();
       }
       job.status = 'completed';
     } catch {
