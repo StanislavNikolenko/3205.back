@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CreateJobDto } from './dto/create-job.dto';
 import { Job } from './types/url-job';
 import { randomUUID } from 'crypto';
@@ -54,5 +54,13 @@ export class JobsService {
     } finally {
       job.finishedAt = new Date();
     }
+  }
+
+  public getById(jobId: string) {
+    const job = this.jobs.get(jobId);
+    if (!job) {
+      throw new NotFoundException(`Job ${jobId} not found`);
+    }
+    return job;
   }
 }
