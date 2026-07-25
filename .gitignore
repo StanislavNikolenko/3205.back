@@ -1,0 +1,16 @@
+# MacOS system files
+.DS_Store
+
+# Nest output
+dist/
+
+# Node
+node_modules/
+
+# Envs
+config
+*.env
+.env*
+
+# Do not include the .env.template file
+!.env.template
