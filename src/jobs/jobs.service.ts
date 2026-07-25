@@ -1,6 +1,10 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { CreateJobDto } from './dto/create-job.dto';
-import { Job } from './types/url-job';
+import { Job, JobStatus } from './types/url-job';
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -29,10 +33,14 @@ export class JobsService {
     const job = this.jobs.get(jobId);
     if (!job) return;
 
-    job.status = 'in_progress';
+    job.status = 'in_progress' as JobStatus;
 
     try {
       for (let i = 0; i < job.urls.length; i++) {
+        if (job.status === 'cancelled') {
+          break;
+        }
+
         const url = job.urls[i];
         const item = job.results[i];
 
@@ -57,17 +65,21 @@ export class JobsService {
         item.finishedAt = new Date();
         item.durationMs = item.finishedAt.getTime() - item.startedAt.getTime();
       }
-      job.status = 'completed';
+      if (job.status !== 'cancelled') {
+        job.status = 'completed';
+      }
     } catch {
       job.status = 'failed';
     } finally {
-      job.finishedAt = new Date();
+      if (!job.finishedAt) {
+        job.finishedAt = new Date();
+      }
     }
   }
 
   public getAllJobs() {
     const jobs = Array.from(this.jobs.values());
-    const result = jobs.map((job) => {
+    return jobs.map((job) => {
       const urlSuccessCount = job.results.filter(
         (r) => r.status === 'success',
       ).length;
@@ -84,7 +96,6 @@ export class JobsService {
         urlErrorCount,
       };
     });
-    return result;
   }
 
   public getById(jobId: string) {
@@ -93,5 +104,32 @@ export class JobsService {
       throw new NotFoundException(`Job ${jobId} not found`);
     }
     return job.results;
+  }
+
+  public cancelJobById(jobId: string) {
+    const job = this.jobs.get(jobId);
+    if (!job) {
+      throw new NotFoundException(`Job ${jobId} not found`);
+    }
+
+    if (
+      job.status === 'completed' ||
+      job.status === 'failed' ||
+      job.status === 'cancelled'
+    ) {
+      throw new BadRequestException(
+        `Job ${job.id} is already ${job.status} and cannot be cancelled`,
+      );
+    }
+
+    job.status = 'cancelled';
+    job.finishedAt = new Date();
+
+    for (const item of job.results) {
+      if (item.status === 'pending') {
+        item.status = 'cancelled';
+      }
+    }
+    return { jobId: job.id, status: job.status };
   }
 }
