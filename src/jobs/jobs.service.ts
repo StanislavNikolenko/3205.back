@@ -35,35 +35,42 @@ export class JobsService {
 
     job.status = 'in_progress' as JobStatus;
 
+    const CONCURRENCY = 5;
+
     try {
-      for (let i = 0; i < job.urls.length; i++) {
-        if (job.status === 'cancelled') {
-          break;
-        }
+      for (let start = 0; start < job.urls.length; start += CONCURRENCY) {
+        if (job.status === 'cancelled') break;
 
-        const url = job.urls[i];
-        const item = job.results[i];
+        const slice = job.urls.slice(start, start + CONCURRENCY);
 
-        item.status = 'in_progress';
-        item.startedAt = new Date();
+        await Promise.all(
+          slice.map(async (url, offset) => {
+            const i = start + offset;
+            const item = job.results[i];
 
-        try {
-          const res = await fetch(url, {
-            method: 'HEAD',
-            signal: AbortSignal.timeout(5000),
-          });
+            item.status = 'in_progress';
+            item.startedAt = new Date();
 
-          const delayMs = Math.floor(Math.random() * 10001);
-          await new Promise((resolve) => setTimeout(resolve, delayMs));
+            try {
+              const res = await fetch(url, {
+                method: 'HEAD',
+                signal: AbortSignal.timeout(5000),
+              });
 
-          item.httpStatusCode = res.status;
-          item.status = 'success';
-        } catch (e) {
-          item.status = 'error';
-          item.error = e instanceof Error ? e.message : 'Unknown error';
-        }
-        item.finishedAt = new Date();
-        item.durationMs = item.finishedAt.getTime() - item.startedAt.getTime();
+              const delayMs = Math.floor(Math.random() * 10001);
+              await new Promise((resolve) => setTimeout(resolve, delayMs));
+
+              item.httpStatusCode = res.status;
+              item.status = 'success';
+            } catch (e) {
+              item.status = 'error';
+              item.error = e instanceof Error ? e.message : 'Unknown error';
+            }
+            item.finishedAt = new Date();
+            item.durationMs =
+              item.finishedAt.getTime() - item.startedAt.getTime();
+          }),
+        );
       }
       if (job.status !== 'cancelled') {
         job.status = 'completed';
