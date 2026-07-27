@@ -4,21 +4,28 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { CreateJobDto } from './dto/create-job.dto';
-import { Job, JobStatus } from './types/url-job';
+import {
+  JobIdStatusResponse,
+  Job,
+  JobDetailsResponse,
+  JobStatus,
+  JobSummary,
+  JobStats,
+} from './types/url-job';
 import { randomUUID } from 'crypto';
 
 @Injectable()
 export class JobsService {
   private readonly jobs = new Map<string, Job>();
 
-  public create(createJobDto: CreateJobDto) {
+  public create(createJobDto: CreateJobDto): JobIdStatusResponse {
     const job: Job = {
       id: randomUUID(),
       status: 'pending',
       urls: createJobDto.urls,
       results: createJobDto.urls.map((url) => ({
         url,
-        status: 'pending' as const,
+        status: 'pending',
       })),
       createdAt: new Date(),
     };
@@ -29,7 +36,7 @@ export class JobsService {
     return { jobId: job.id, status: 'pending' };
   }
 
-  private async run(jobId: string) {
+  private async run(jobId: string): Promise<void> {
     const job = this.jobs.get(jobId);
     if (!job) return;
 
@@ -84,7 +91,7 @@ export class JobsService {
     }
   }
 
-  public getAllJobs() {
+  public getAllJobs(): JobSummary[] {
     const jobs = Array.from(this.jobs.values());
     return jobs.map((job) => {
       const { urlSuccessCount, urlErrorCount } = this.getJobStats(job);
@@ -99,7 +106,7 @@ export class JobsService {
     });
   }
 
-  public getById(jobId: string) {
+  public getById(jobId: string): JobDetailsResponse {
     const job = this.jobs.get(jobId);
     if (!job) {
       throw new NotFoundException(`Job ${jobId} not found`);
@@ -118,7 +125,7 @@ export class JobsService {
     };
   }
 
-  public cancelJobById(jobId: string) {
+  public cancelJobById(jobId: string): JobIdStatusResponse {
     const job = this.jobs.get(jobId);
     if (!job) {
       throw new NotFoundException(`Job ${jobId} not found`);
@@ -145,7 +152,7 @@ export class JobsService {
     return { jobId: job.id, status: job.status };
   }
 
-  private getJobStats(job: Job) {
+  private getJobStats(job: Job): JobStats {
     return {
       urlSuccessCount: job.results.filter((r) => r.status === 'success').length,
       urlErrorCount: job.results.filter((r) => r.status === 'error').length,

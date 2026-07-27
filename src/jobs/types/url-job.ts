@@ -22,3 +22,26 @@ export type Job = {
   createdAt: Date;
   finishedAt?: Date;
 };
+
+export type JobIdStatusResponse = {
+  jobId: string;
+  status: JobStatus;
+};
+
+export type JobSummary = {
+  id: string;
+  status: JobStatus;
+  createdAt: Date;
+  urlCount: number;
+  urlSuccessCount: number;
+  urlErrorCount: number;
+};
+
+export type JobDetailsResponse = JobSummary & {
+  results: UrlResult[];
+};
+
+export type JobStats = {
+  urlSuccessCount: number;
+  urlErrorCount: number;
+};
