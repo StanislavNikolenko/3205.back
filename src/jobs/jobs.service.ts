@@ -87,13 +87,7 @@ export class JobsService {
   public getAllJobs() {
     const jobs = Array.from(this.jobs.values());
     return jobs.map((job) => {
-      const urlSuccessCount = job.results.filter(
-        (r) => r.status === 'success',
-      ).length;
-      const urlErrorCount = job.results.filter(
-        (r) => r.status === 'error',
-      ).length;
-
+      const { urlSuccessCount, urlErrorCount } = this.getJobStats(job);
       return {
         id: job.id,
         status: job.status,
@@ -110,7 +104,18 @@ export class JobsService {
     if (!job) {
       throw new NotFoundException(`Job ${jobId} not found`);
     }
-    return job.results;
+
+    const { urlSuccessCount, urlErrorCount } = this.getJobStats(job);
+
+    return {
+      id: job.id,
+      status: job.status,
+      createdAt: job.createdAt,
+      urlCount: job.urls.length,
+      urlSuccessCount,
+      urlErrorCount,
+      results: job.results,
+    };
   }
 
   public cancelJobById(jobId: string) {
@@ -138,5 +143,12 @@ export class JobsService {
       }
     }
     return { jobId: job.id, status: job.status };
+  }
+
+  private getJobStats(job: Job) {
+    return {
+      urlSuccessCount: job.results.filter((r) => r.status === 'success').length,
+      urlErrorCount: job.results.filter((r) => r.status === 'error').length,
+    };
   }
 }
